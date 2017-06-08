@@ -1,6 +1,7 @@
 {
   "name": "gamaas",
   "version": "1.0.0",
+  "repository": "https://github.com/Steague/gamaas",
   "description": "Gamify your web app",
   "main": "./dist/index.js",
   "scripts": {
@@ -12,7 +13,7 @@
   "keywords": [
     "gamify"
   ],
-  "author": "steague <sean.teague@gmail.com>",
+  "author": "steague <sean.teague@gmail.com> (https://github.com/Steague/gamaas)",
   "license": "ISC",
   "devDependencies": {
     "babel-cli": "^6.24.1",
