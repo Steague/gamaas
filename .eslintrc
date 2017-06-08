@@ -1,0 +1,70 @@
+{
+    "env": {
+        "browser": true,
+        "commonjs": true,
+        "es6": true,
+        "node": true
+    },
+    "globals": {},
+    "extends": [
+        "eslint:recommended",
+        "plugin:react/recommended",
+        "plugin:flowtype/recommended"
+    ],
+    "parserOptions": {
+        "ecmaFeatures": {
+            "experimentalObjectRestSpread": true,
+            "jsx": true
+        },
+        "sourceType": "module"
+    },
+    "plugins": [
+        "react",
+        "flowtype"
+    ],
+    "settings": {
+         "react": {
+            "createClass": "createClass", // Regex for Component Factory to use, default to "createClass"
+            "pragma": "React",  // Pragma to use, default to "React"
+            "version": "15.0" // React version, default to the latest React stable release
+        }
+    },
+    "rules": {
+        "no-var": [
+            "error"
+        ],
+        "no-trailing-spaces": 2,
+        "indent": [
+            "error",
+            4,
+            { "SwitchCase": 1 }
+        ],
+        "key-spacing": ["error", {
+            "multiLine" : {
+                "beforeColon" : true,
+                "afterColon"  : true
+
+            },
+            "align"     : {
+                "beforeColon" : true,
+                "afterColon"  : true,
+                "on"          : "colon"
+            }
+        }],
+        "linebreak-style": [
+            "error",
+            "unix"
+        ],
+        "comma-dangle": [
+            "error",
+            "never"
+        ],
+        "semi": [
+            "error",
+            "always"
+        ],
+        "react/no-deprecated": "error",
+        "flowtype/space-before-type-colon": 0,
+        "flowtype/space-after-type-colon": 0
+    }
+}
