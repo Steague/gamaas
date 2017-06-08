@@ -1,15 +1,23 @@
+// @flow
+
 'use strict';
 
 import _    from 'lodash';
 import Enum from 'enum';
+import log  from 'loglevel';
 
 class Gamaas {
-    constructor() {
+    options: { store: { when: Object } };
+    config: { store: { when: Object, dataKey: string } };
+    achievements: Object;
+    static instance: Gamaas;
+
+    constructor(): Object {
         if (!Gamaas.instance) {
-            console.log("initializing Gamaas class");
+            log.info("initializing Gamaas class");
 
             if (!localStorage) {
-                console.lof("Local storage is not available.");
+                throw new Error("Local storage is not available.");
             }
 
             this.options = {
@@ -31,61 +39,60 @@ class Gamaas {
         return Gamaas.instance;
     }
 
-    init(configOnject) {
+    init(configOnject: Object): Gamaas {
         if (!_.has(configOnject, "achievements")) {
-            console.error("No achievements specified.");
-            return this;
+            throw new Error("No achievements specified.");
         }
 
-        _.forEach(configOnject, (v, k) => {
-            if (k === "achievements") {
-                return this.processAchievements(v);
-            } else if (k === "progression") {
-                return this.processProgressions(v);
-            } else if (k === "store") {
-                return this.processStorage(v);
+        _.map(configOnject, this.processConfig.bind(this));
+
+        return this;
+    }
+
+    processConfig(v: Object, k: string): void {
+        switch (k) {
+            case "achievements": {
+                this.processAchievements(v);
+                this.processProgressions();
+                break;
             }
-        });
-
-        return this;
+            case "store": {
+                this.processStorage(v);
+                break;
+            }
+        }
     }
 
-    setConfig(k, v) {
-        Object.assign(this.config, {[k]: v});
-        return this;
-    }
-
-    getConfig() {
+    getConfig(): Object {
         return this.config;
     }
 
-    displayConfig() {
-        console.log(this.config);
+    displayConfig(): Gamaas {
+        log.info(this.config);
         return this;
     }
 
-    displayAchievements() {
-        console.log(this.achievements);
+    displayAchievements(): Gamaas {
+        log.info(this.achievements);
         return this;
     }
 
-    displayPoints() {
-        console.log("Points: ", 5);
+    displayPoints(): Gamaas {
+        log.info("Points: ", 5);
         return this;
     }
 
-    processStorage(store) {
+    processStorage(store: Object): boolean {
         if (!_.isObject(store)) {
-            console.error("Store must be an object. Received " + (typeof store));
-            return false;
+            throw new Error("Store must be an object. Received " + (typeof store));
         }
 
         if (_.has(store, "when")) {
-            let when = store.when.toUpperCase();
+            let when: string = store.when.toUpperCase();
             if(this.options.store.when.get(when)) {
                 this.config.store.when = this.options.store.when[when];
             } else {
-                console.error("Invalid value for when to store");
+                throw new Error("Invalid value for when to store");
             }
         }
 
@@ -93,72 +100,60 @@ class Gamaas {
             this.config.store.dataKey = store.dataKey;
         }
 
-        return this;
+        return true;
     }
 
-    processProgressions(progressions) {
-        if (_.isString(progressions) &&
-            progressions.toUpperCase() === "STORAGE") {
-            return this.processProgressions(this.getStore());
-        }
+    processProgressions(): boolean {
+        let progressions = this.getStore();
 
         if (!_.isObject(progressions)) {
-            console.error("Progressions must be an object or \"STORAGE\". Received " + (typeof achievements));
-            return false;
+            throw new Error("Progressions must be an object or \"STORAGE\". Received " + (typeof progressions));
         }
 
-        _.forEach(progressions, (a, k) => {
-            return this.processProgression(k, a);
-        });
+        _.map(progressions, this.processProgression.bind(this));
 
         return true;
     }
 
-    processProgression(id, progression) {
+    processProgression(progression: { progress?: number, awarded?: boolean }, id: string): boolean {
         if (!_.isObject(progression)) {
-            console.error("Progression needs to be an object. Received " + (typeof progression));
-            return false;
+            throw new Error("Progression needs to be an object. Received " + (typeof progression));
         }
 
         if (!_.has(this.achievements, id)) {
-            console.error(`Achievement ${id} does not exist.`);
-            return this;
+            throw new Error(`Achievement ${id} does not exist.`);
         }
 
         if (!_.has(progression, "progress")) {
-            console.error(`Progression ${id} lacks progress amount`);
-            return false;
+            throw new Error(`Progression ${id} lacks progress amount`);
         }
 
         if (!_.has(progression, "awarded")) {
-            console.error(`Progression ${id} lacks award state`);
-            return false;
+            throw new Error(`Progression ${id} lacks award state`);
         }
 
         let { progress, awarded } = progression;
 
-        console.log(_.merge({}, this.achievements[id], { progress, awarded }));
+        log.info(_.merge({}, this.achievements[id], { progress, awarded }));
 
         this.achievements[id] = _.merge({}, this.achievements[id], { progress, awarded });
 
         return true;
     }
 
-    processAchievements(achievements) {
+    processAchievements(achievements: Object): boolean {
         if (!_.isObject(achievements)) {
-            console.error("Achievements must be an object. Received " + (typeof achievements));
-            return false;
+            throw new Error("Achievements must be an object. Received " + (typeof achievements));
         }
 
-        _.forEach(achievements, (a, k) => {
-            return this.processAchievement(k, a);
-        });
+        _.map(achievements, this.processAchievement.bind(this));
+
+        return true;
     }
 
-    processAchievement(id, achievement) {
+    processAchievement(achievement: Object, id: string): boolean {
         if (!_.isObject(achievement)) {
-            console.error("Achievement needs to be an object. Received " + (typeof achievement));
-            return false;
+            throw new Error("Achievement needs to be an object. Received " + (typeof achievement));
         }
 
         Object.assign(this.achievements, _.merge({}, this.achievements, {
@@ -167,22 +162,24 @@ class Gamaas {
                 awarded: false
             })
         }));
+
         return true;
     }
 
-    store() {
-        console.log("Storing achievements", JSON.stringify(this.achievements));
-        localStorage.setItem(this.config.store.datakey, JSON.stringify(this.achievements));
+    store(): Gamaas {
+        log.info("Storing achievements", JSON.stringify(this.achievements));
+        window.localStorage.setItem(this.config.store.dataKey, JSON.stringify(this.achievements));
+
+        return this;
     }
 
-    getStore() {
-        return JSON.parse(localStorage.getItem(this.config.store.datakey));
+    getStore(): Object {
+        return JSON.parse(window.localStorage.getItem(this.config.store.dataKey));
     }
 
-    progress(id, awarded = true) {
+    progress(id: string, awarded: boolean = true): Gamaas {
         if (!_.has(this.achievements, id)) {
-            console.error(`Achievement ${id} does not exist.`);
-            return this;
+            throw new Error(`Achievement ${id} does not exist.`);
         }
 
         if ((_.has(this.achievements[id], "exceedRequired") &&
@@ -204,10 +201,9 @@ class Gamaas {
         return this;
     }
 
-    regress(id, awarded = true) {
+    regress(id: string, awarded: boolean = true): Gamaas {
         if (!_.has(this.achievements, id)) {
-            console.error(`Achievement ${id} does not exist.`);
-            return this;
+            throw new Error(`Achievement ${id} does not exist.`);
         }
 
         this.achievements[id].progress--;
@@ -225,15 +221,13 @@ class Gamaas {
         return this;
     }
 
-    reset(id, awarded = false) {
+    reset(id: string, awarded: boolean = false): Gamaas {
         if (!_.has(this.achievements, id)) {
-            console.error(`Achievement ${id} does not exist.`);
-            return this;
+            throw new Error(`Achievement ${id} does not exist.`);
         }
 
         if (!_.isBoolean(awarded)) {
-            console.error(`Achievement ${id} cannot be awarded: ${awarded}.`);
-            return this;
+            throw new Error(`Achievement ${id} cannot be awarded: ${awarded.toString()}.`);
         }
 
         this.achievements[id].progress = 0;
@@ -251,15 +245,13 @@ class Gamaas {
         return this;
     }
 
-    award(id, awarded = true) {
+    award(id: string, awarded: boolean = true): Gamaas {
         if (!_.has(this.achievements, id)) {
-            console.error(`Achievement ${id} does not exist.`);
-            return this;
+            throw new Error(`Achievement ${id} does not exist.`);
         }
 
         if (!_.isBoolean(awarded)) {
-            console.error(`Achievement ${id} cannot be awarded: ${awarded}.`);
-            return this;
+            throw new Error(`Achievement ${id} cannot be awarded: ${awarded.toString()}.`);
         }
 
         this.achievements[id].awarded = awarded;
@@ -272,7 +264,7 @@ class Gamaas {
     }
 }
 
-let gamaas = new Gamaas();
+let gamaas: Gamaas = new Gamaas();
 Object.freeze(gamaas);
 
 export default gamaas;

@@ -1,3 +1,5 @@
+// @flow
+
 'use strict';
 
 import gamaas from './gamaas';
@@ -9,11 +11,16 @@ gamaas.init({
             worth          : 5,
             required       : 5,
             exceedRequired : false
+        },
+        clickedThing2 : {
+            title          : "Clicked another thing",
+            worth          : 5,
+            required       : 5,
+            exceedRequired : false
         }
     },
-    progression : "storage",
     store : {
-        when    : "always",// or called
+        when    : "always",
         dataKey : "achievements"
     }
 })

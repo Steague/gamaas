@@ -1,0 +1,10 @@
+[ignore]
+
+[include]
+src/*
+
+[libs]
+
+[options]
+esproposal.class_instance_fields=warn
+esproposal.class_static_fields=warn

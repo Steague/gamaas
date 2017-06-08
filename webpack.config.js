@@ -1,9 +1,9 @@
 'use strict';
 
-const webpack         = require('webpack');
-const path            = require('path');
-const buildFailer     = require('webpack-fail-plugin');
-let HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack           = require('webpack');
+const path              = require('path');
+const buildFailer       = require('webpack-fail-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const plugins = [];
 
@@ -49,7 +49,7 @@ let config = {
                 use     : [{
                     loader  : 'babel-loader',
                     options : {
-                        presets : ['es2015']
+                        presets : ['es2015', 'flow']
                     }
                 }]
             },
