@@ -24,11 +24,23 @@ gamaas.init({
         dataKey : "achievements"
     }
 })
-.progress("clickedThing1")
-// .progress("clickedThing2")
-// .reset("clickedThing1")
-// .award("clickedThing1")
+.on("progress", ({id}) => {
+    console.log("A progress event!", id);
+})
+.on("regress", ({id}) => {
+    console.log("A regress event!", id);
+})
+.on("award", ({id}) => {
+    console.log("An award event!", id);
+})
+.on("reset", ({id}) => {
+    console.log("A reset event!", id);
+});
+// .progress("clickedThing1")
+// .regress("clickedThing1")
 // .reset("clickedThing1", true)
-.displayAchievements()
-.displayPoints()
-.displayConfig();
+// .progress("clickedThing1")
+// .displayPoints()
+// .getPoints();
+
+window.gamaas = gamaas;

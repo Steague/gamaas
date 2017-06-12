@@ -2,33 +2,49 @@
 
 'use strict';
 
-import _    from 'lodash';
-import Enum from 'enum';
-import log  from 'loglevel';
+import _            from 'lodash';
+import Enum         from 'enum';
+import log          from 'loglevel';
+import EventHandler from 'eventhandler';
 
 class Gamaas {
-    options: { store: { when: Object } };
-    config: { store: { when: Object, dataKey: string } };
+    options: {
+        store: {
+            when: Enum
+        },
+        events: Enum
+    };
+    config: {
+        store: {
+            when: Object,
+            dataKey: string
+        }
+    };
     achievements: Object;
+    events: EventHandler;
+
     static instance: Gamaas;
 
     constructor(): Object {
         if (!Gamaas.instance) {
-            log.info("initializing Gamaas class");
+            log.debug("initializing Gamaas class");
 
             if (!localStorage) {
                 throw new Error("Local storage is not available.");
             }
 
+            this.events = new EventHandler();
+
             this.options = {
                 store : {
                     when : new Enum(["ALWAYS", "CALLED"])
-                }
+                },
+                events : new Enum(["PROGRESS", "REGRESS", "RESET", "AWARD"])
             };
             this.config = {
                 store : {
-                    when    : this.options.store.when.CALLED,
-                    dataKey : "achievements"
+                    when     : this.options.store.when.CALLED,
+                    dataKey  : "achievements"
                 }
             }
             this.achievements = {};
@@ -39,46 +55,64 @@ class Gamaas {
         return Gamaas.instance;
     }
 
-    init(configOnject: Object): Gamaas {
+    init(configOnject: {
+        achievements : Object,
+        store        : Object,
+        progression? : Object,
+        callbacks?   : Object
+    }): Gamaas {
         if (!_.has(configOnject, "achievements")) {
             throw new Error("No achievements specified.");
         }
 
-        _.map(configOnject, this.processConfig.bind(this));
+        let { achievements, store, progression, callbacks } = configOnject;
+
+        // Achievements must be processed before progression
+        this.processAchievements(achievements);
+        if (progression) {
+            this.processProgressions(progression);
+        } else {
+            this.processProgressions();
+        }
+
+        this.processStorage(store);
 
         return this;
-    }
-
-    processConfig(v: Object, k: string): void {
-        switch (k) {
-            case "achievements": {
-                this.processAchievements(v);
-                this.processProgressions();
-                break;
-            }
-            case "store": {
-                this.processStorage(v);
-                break;
-            }
-        }
     }
 
     getConfig(): Object {
-        return this.config;
+        return _.cloneDeep(this.config);
     }
 
     displayConfig(): Gamaas {
-        log.info(this.config);
+        log.info(this.getConfig());
         return this;
+    }
+
+    getAchievements(): Object {
+        return _.cloneDeep(this.achievements);
     }
 
     displayAchievements(): Gamaas {
-        log.info(this.achievements);
+        log.info(this.getAchievements());
         return this;
     }
 
+    getPoints(): number {
+        let points = 0;
+        _.map(this.achievements, (a) => {
+            if (a.awarded) {
+                points += a.worth;
+            }
+        });
+
+        return points;
+    }
+
     displayPoints(): Gamaas {
-        log.info("Points: ", 5);
+        let points = this.getPoints();
+        log.info("Points: ", points);
+
         return this;
     }
 
@@ -89,7 +123,7 @@ class Gamaas {
 
         if (_.has(store, "when")) {
             let when: string = store.when.toUpperCase();
-            if(this.options.store.when.get(when)) {
+            if (this.options.store.when.get(when)) {
                 this.config.store.when = this.options.store.when[when];
             } else {
                 throw new Error("Invalid value for when to store");
@@ -103,8 +137,10 @@ class Gamaas {
         return true;
     }
 
-    processProgressions(): boolean {
-        let progressions = this.getStore();
+    processProgressions(progressions? : Object): boolean {
+        if (!progressions) {
+            progressions = this.getStore();
+        }
 
         if (!_.isObject(progressions)) {
             throw new Error("Progressions must be an object or \"STORAGE\". Received " + (typeof progressions));
@@ -133,8 +169,6 @@ class Gamaas {
         }
 
         let { progress, awarded } = progression;
-
-        log.info(_.merge({}, this.achievements[id], { progress, awarded }));
 
         this.achievements[id] = _.merge({}, this.achievements[id], { progress, awarded });
 
@@ -167,8 +201,17 @@ class Gamaas {
     }
 
     store(): Gamaas {
-        log.info("Storing achievements", JSON.stringify(this.achievements));
-        window.localStorage.setItem(this.config.store.dataKey, JSON.stringify(this.achievements));
+        let achievements = {};
+        _.map(_.cloneDeep(this.achievements), (a, id) => {
+            const { progress, awarded } = a;
+            achievements[id] = {
+                progress,
+                awarded
+            }
+        });
+
+        log.info("Storing achievements", JSON.stringify(achievements));
+        window.localStorage.setItem(this.config.store.dataKey, JSON.stringify(achievements));
 
         return this;
     }
@@ -186,16 +229,21 @@ class Gamaas {
             this.achievements[id].exceedRequired) ||
             this.achievements[id].progress < this.achievements[id].required) {
             this.achievements[id].progress++;
-        }
 
-        if (_.isBoolean(awarded) &&
-            awarded &&
-            this.achievements[id].progress >= this.achievements[id].required) {
-            this.achievements[id].awarded = true;
-        }
+            this.events.emit("progress", {
+                event : "progress",
+                id
+            });
 
-        if (this.options.store.when.get(this.config.store.when)) {
-            this.store();
+            if (_.isBoolean(awarded) &&
+                awarded &&
+                this.achievements[id].progress >= this.achievements[id].required) {
+                this.award(id, true, "progress");
+            }
+
+            if (this.options.store.when.get(this.config.store.when)) {
+                this.store();
+            }
         }
 
         return this;
@@ -206,16 +254,23 @@ class Gamaas {
             throw new Error(`Achievement ${id} does not exist.`);
         }
 
-        this.achievements[id].progress--;
+        if (this.achievements[id].progress > 0) {
+            this.achievements[id].progress--;
 
-        if (_.isBoolean(awarded) &&
-            awarded &&
-            this.achievements[id].progress < this.achievements[id].required) {
-            this.achievements[id].awarded = false;
-        }
+            this.events.emit("regress", {
+                event : "regress",
+                id
+            });
 
-        if (this.options.store.when.get(this.config.store.when)) {
-            this.store();
+            if (_.isBoolean(awarded) &&
+                awarded &&
+                this.achievements[id].progress < this.achievements[id].required) {
+                this.award(id, false, "regress");
+            }
+
+            if (this.options.store.when.get(this.config.store.when)) {
+                this.store();
+            }
         }
 
         return this;
@@ -232,10 +287,15 @@ class Gamaas {
 
         this.achievements[id].progress = 0;
 
+        this.events.emit("reset", {
+            event : "reset",
+            id
+        });
+
         if (_.isBoolean(awarded) &&
             awarded &&
             this.achievements[id].progress < this.achievements[id].required) {
-            this.achievements[id].awarded = false;
+            this.achievements[id].awarded  = false;
         }
 
         if (this.options.store.when.get(this.config.store.when)) {
@@ -245,7 +305,7 @@ class Gamaas {
         return this;
     }
 
-    award(id: string, awarded: boolean = true): Gamaas {
+    award(id: string, awarded: boolean = true, reason? : string = "Unknown"): Gamaas {
         if (!_.has(this.achievements, id)) {
             throw new Error(`Achievement ${id} does not exist.`);
         }
@@ -256,9 +316,29 @@ class Gamaas {
 
         this.achievements[id].awarded = awarded;
 
+        this.events.emit("award", {
+            event   : "award",
+            message : reason,
+            id
+        });
+
         if (this.options.store.when.get(this.config.store.when)) {
             this.store();
         }
+
+        return this;
+    }
+
+    on(event: string, callback: Function): Gamaas {
+        if (!this.options.events.get(event.toUpperCase())) {
+            throw new Error("Invalid event type");
+        }
+
+        this.events.on(event, (data) => {
+            setTimeout(() => {
+                callback(data);
+            },1);
+        });
 
         return this;
     }
