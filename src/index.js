@@ -36,11 +36,5 @@ gamaas.init({
 .on("reset", ({id}) => {
     console.log("A reset event!", id);
 });
-// .progress("clickedThing1")
-// .regress("clickedThing1")
-// .reset("clickedThing1", true)
-// .progress("clickedThing1")
-// .displayPoints()
-// .getPoints();
 
 window.gamaas = gamaas;
