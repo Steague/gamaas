@@ -29,7 +29,7 @@ class Gamaas {
         if (!Gamaas.instance) {
             log.debug("initializing Gamaas class");
 
-            if (!localStorage) {
+            if (!_.has(window, "localStorage")) {
                 throw new Error("Local storage is not available.");
             }
 
