@@ -2,7 +2,7 @@
 
 'use strict';
 
-import gamaas from './gamaas';
+import gamaas from '../index';
 
 gamaas.init({
     achievements: {
