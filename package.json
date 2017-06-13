@@ -1,6 +1,6 @@
 {
   "name": "gamaas",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "repository": "https://github.com/Steague/gamaas",
   "description": "Gamify your web app",
   "main": "./dist/index.js",
