@@ -2,9 +2,9 @@
 
 'use strict';
 
-import gamaas from '../index';
+import Gamaas from './gamaas';
 
-gamaas.init({
+Gamaas.init({
     achievements: {
         clickedThing1 : {
             title          : "Clicked a thing",
@@ -37,4 +37,4 @@ gamaas.init({
     console.log("A reset event!", id);
 });
 
-window.gamaas = gamaas;
+window.gamaas = Gamaas;
