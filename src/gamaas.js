@@ -138,7 +138,7 @@ class Gamaas {
 
     processProgressions(progressions? : Object): boolean {
         if (!progressions) {
-            progressions = this.getStore();
+            progressions = this.getStore() || {};
         }
 
         if (!_.isObject(progressions)) {
