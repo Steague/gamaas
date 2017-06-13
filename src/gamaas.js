@@ -58,14 +58,13 @@ class Gamaas {
     init(configOnject: {
         achievements : Object,
         store        : Object,
-        progression? : Object,
-        callbacks?   : Object
+        progression? : Object
     }): Gamaas {
         if (!_.has(configOnject, "achievements")) {
             throw new Error("No achievements specified.");
         }
 
-        let { achievements, store, progression, callbacks } = configOnject;
+        let { achievements, store, progression } = configOnject;
 
         // Achievements must be processed before progression
         this.processAchievements(achievements);
